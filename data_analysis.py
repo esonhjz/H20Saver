@@ -1,8 +1,7 @@
 import os
-import cv2
 import yaml
-import random
 import numpy as np
+import seaborn as sns
 import matplotlib.pyplot as plt
 from collections import defaultdict
 
@@ -123,74 +122,9 @@ ax.legend()
 plt.savefig(os.path.join(output_dir, "class_distribution.png"), bbox_inches="tight")
 plt.close()
 
-# ----------------------------
-# 2. 可视化示例
-# ----------------------------
-def visualize_sample(image_dir, label_dir, output_dir, num_samples=3):
-    image_dir = os.path.join(image_dir, "images")
-    # 获取有效图像列表
-    valid_images = []
-    for img_file in os.listdir(image_dir):
-        if not img_file.lower().endswith((".jpg", ".png")):
-            continue
-            
-        image_path = os.path.join(image_dir, img_file)
-        label_path = os.path.join(label_dir, img_file.rsplit(".", 1)[0] + ".txt")
-        
-        # 检查图像可读性
-        if cv2.imread(image_path) is None:
-            stats["corrupted_images"] += 1
-            continue
-            
-        # 检查标注文件
-        if not os.path.exists(label_path):
-            continue  # 已在count_class_distribution中统计
-            
-        valid_images.append(img_file)
-    
-    # 随机采样
-    selected_images = random.sample(valid_images, min(num_samples, len(valid_images)))
-    
-    # 可视化保存
-    for idx, img_file in enumerate(selected_images):
-        image_path = os.path.join(image_dir, img_file)
-        label_path = os.path.join(label_dir, img_file.rsplit(".", 1)[0] + ".txt")
-        
-        # 读取并绘制
-        image = cv2.imread(image_path)
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        h, w = image.shape[:2]
-        
-        with open(label_path, "r") as f:
-            lines = f.readlines()
-        
-        # 绘制标注框
-        for line in lines:
-            try:
-                class_id, x_center, y_center, bw, bh = map(float, line.strip().split())
-                x1 = int((x_center - bw/2) * w)
-                y1 = int((y_center - bh/2) * h)
-                x2 = int((x_center + bw/2) * w)
-                y2 = int((y_center + bh/2) * h)
-                
-                cv2.rectangle(image, (x1, y1), (x2, y2), (255,0,0), 2)
-                cv2.putText(image, class_names[int(class_id)], 
-                           (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (255,0,0), 2)
-            except:
-                stats["invalid_annotations"] += 1
-        
-        # 保存结果
-        plt.figure(figsize=(12, 8))
-        plt.imshow(image)
-        plt.axis("off")
-        plt.savefig(os.path.join(output_dir, f"example_{idx+1}.png"), bbox_inches="tight")
-        plt.close()
-
-# 执行可视化
-visualize_sample(train_dir, train_label_dir, output_dir)
 
 # ----------------------------
-# 3. 标注框分析
+# 2. 标注框分析
 # ----------------------------
 def analyze_bbox(label_dir):
     widths, heights, centers_x, centers_y = [], [], [], []
@@ -213,7 +147,7 @@ def analyze_bbox(label_dir):
     return widths, heights, centers_x, centers_y
 
 # ----------------------------
-# 4. 绘制分析图
+# 3. 绘制分析图
 # ----------------------------
 
 widths, heights, centers_x, centers_y = analyze_bbox(train_label_dir)
@@ -236,6 +170,45 @@ plt.ylabel("归一化Y坐标")
 plt.title("标注框中心点分布")
 
 plt.savefig(os.path.join(output_dir, "bbox_analysis.png"), bbox_inches="tight")
+plt.close()
+
+# 饼图：类别分布
+plt.figure(figsize=(8, 8))
+plt.pie(
+    [train_counts[i] for i in range(len(class_names))],
+    labels=class_names,
+    autopct='%1.1f%%',
+    startangle=90
+)
+plt.title("训练集类别分布")
+plt.savefig(os.path.join(output_dir, "class_distribution_pie.png"), bbox_inches="tight")
+plt.close()
+
+# 热力图：标注框中心点分布
+plt.figure(figsize=(10, 8))
+sns.kdeplot(x=centers_x, y=centers_y, cmap="Reds", shade=True)
+plt.xlabel("归一化X坐标")
+plt.ylabel("归一化Y坐标")
+plt.title("标注框中心点热力图")
+plt.savefig(os.path.join(output_dir, "bbox_heatmap.png"), bbox_inches="tight")
+plt.close()
+
+# 箱线图：标注框尺寸分布
+plt.figure(figsize=(10, 6))
+plt.boxplot([widths, heights], labels=["宽度", "高度"])
+plt.xlabel("标注框尺寸")
+plt.ylabel("归一化值")
+plt.title("标注框尺寸箱线图")
+plt.savefig(os.path.join(output_dir, "bbox_boxplot.png"), bbox_inches="tight")
+plt.close()
+
+# 条形图：类别不平衡分析
+plt.figure(figsize=(10, 6))
+plt.bar(class_names, [train_counts[i] for i in range(len(class_names))])
+plt.xlabel("类别")
+plt.ylabel("样本数量")
+plt.title("训练集类别样本数量")
+plt.savefig(os.path.join(output_dir, "class_imbalance.png"), bbox_inches="tight")
 plt.close()
 
 # ----------------------------
