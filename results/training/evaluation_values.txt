@@ -1,0 +1,6 @@
+                 Class     Images  Instances      Box(P          R      mAP50  mAP50-95)
+                   all       1503       2998      0.843      0.729      0.766      0.493
+              drowning       1113       1406      0.874      0.876      0.924      0.634
+          out of water        119        351      0.838      0.464      0.537      0.324
+              swimming        577       1241      0.817      0.845      0.838      0.522
+verification result: mAP@0.5=0.77, mAP@0.5:0.95=0.49
